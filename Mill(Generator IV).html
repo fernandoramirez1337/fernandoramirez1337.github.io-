@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Donut Interactivo Escalable con Nombres Personalizados</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+    body { font-family: Arial, sans-serif; text-align: center; }
+    svg { display: block; margin: auto; }
+    input { margin: 5px; padding: 5px; }
+    .donut-row { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<h2>Configura tus donuts</h2>
+
+<div id="inputs">
+    <div class="donut-row">
+        <span>1</span>
+        (<input type="text" value="OUTER" style="width:80px;">) 
+        <input type="number" min="1" value="6" style="width:60px;">
+    </div>
+    <div class="donut-row">
+        <span>2</span>
+        (<input type="text" value="INNER" style="width:80px;">) 
+        <input type="number" min="1" value="4" style="width:60px;">
+    </div>
+    <div class="donut-row">
+        <span>3</span>
+        (<input type="text" value="CORE" style="width:80px;">) 
+        <input type="number" min="1" value="3" style="width:60px;">
+    </div>
+</div>
+
+<button onclick="generarDonuts()">Generar</button>
+<button onclick="agregarDonut()">Agregar otra dona</button>
+
+<svg id="chart" width="600" height="600"></svg>
+
+<script>
+function agregarDonut() {
+    const div = document.getElementById("inputs");
+    const count = div.querySelectorAll(".donut-row").length + 1;
+
+    const row = document.createElement("div");
+    row.className = "donut-row";
+
+    const span = document.createElement("span");
+    span.textContent = count;
+
+    const nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.value = "NOMBRE";
+    nameInput.style.width = "80px";
+
+    const piecesInput = document.createElement("input");
+    piecesInput.type = "number";
+    piecesInput.min = 1;
+    piecesInput.value = 2;
+    piecesInput.style.width = "60px";
+
+    row.appendChild(span);
+    row.appendChild(document.createTextNode(" ("));
+    row.appendChild(nameInput);
+    row.appendChild(document.createTextNode(") "));
+    row.appendChild(piecesInput);
+
+    div.appendChild(row);
+}
+
+function generarDonuts() {
+    const rows = document.querySelectorAll("#inputs .donut-row");
+
+    // Array con objetos { nombre, piezas }
+    const donutsConfig = Array.from(rows).map(row => {
+        const name = row.querySelector('input[type="text"]').value;
+        const pieces = parseInt(row.querySelector('input[type="number"]').value);
+        return { name, pieces };
+    });
+
+    const svg = d3.select("#chart");
+    svg.selectAll("*").remove();
+
+    const width = +svg.attr("width");
+    const height = +svg.attr("height");
+    const g = svg.append("g").attr("transform", `translate(${width / 2}, ${height / 2})`);
+
+    const grosor = 50;
+    const espacio = 10;
+    const radioMax = Math.min(width, height) / 2 - 20;
+
+    function crearDonut(count, innerRadius, outerRadius, labelPrefix) {
+        const data = Array(count).fill(1);
+        const pie = d3.pie()(data);
+        const arc = d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
+        const colors = Array(count).fill("white");
+        const group = g.append("g");
+
+        group.selectAll("path")
+            .data(pie)
+            .enter()
+            .append("path")
+            .attr("d", arc)
+            .attr("fill", (d, i) => colors[i])
+            .attr("stroke", "black")
+            .style("cursor", "pointer")
+            .on("click", function(event, d) {
+                const i = d.index;
+                if (colors[i] === "white") colors[i] = "red";
+                else if (colors[i] === "red") colors[i] = "green";
+                else if (colors[i] === "green") colors[i] = "yellow";
+                else colors[i] = "white";
+                d3.select(this).attr("fill", colors[i]);
+            });
+
+        // Etiquetas
+        group.selectAll("text")
+            .data(pie)
+            .enter()
+            .append("text")
+            .attr("transform", d => `translate(${arc.centroid(d)})`)
+            .attr("text-anchor", "middle")
+            .attr("alignment-baseline", "middle")
+            .style("font-size", "12px")
+            .text((d, i) => `${labelPrefix}${i + 1}`);
+    }
+
+    // Dibujo de todas las donuts
+    donutsConfig.forEach((donut, index) => {
+        const outerRadius = radioMax - index * (grosor + espacio);
+        const innerRadius = outerRadius - grosor;
+        crearDonut(donut.pieces, innerRadius, outerRadius, donut.name);
+    });
+}
+</script>
+
+</body>
+</html>
